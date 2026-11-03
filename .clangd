@@ -1,0 +1,41 @@
+CompileFlags:
+  CompilationDatabase: .
+  Add:
+    - --target=arm-none-eabi
+    - -mcpu=cortex-m4
+    - -mthumb
+    - -mfpu=fpv4-sp-d16
+    - -mfloat-abi=hard
+    - -std=c11
+    - -DUSE_HAL_DRIVER
+    - -DSTM32G474xx
+    - -D__GNUC__
+    - -isystemC:/Users/LIAN/AppData/Local/Keil_v5/ARM/ARMCLANG/include
+    - -IC:/Users/LIAN/Desktop/POWER/Core/Inc
+    - -IC:/Users/LIAN/Desktop/POWER/Drivers/STM32G4xx_HAL_Driver/Inc
+    - -IC:/Users/LIAN/Desktop/POWER/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy
+    - -IC:/Users/LIAN/Desktop/POWER/Drivers/CMSIS/Device/ST/STM32G4xx/Include
+    - -IC:/Users/LIAN/Desktop/POWER/Drivers/CMSIS/Include
+    - -IC:/Users/LIAN/Desktop/POWER/User/Controller
+    - -IC:/Users/LIAN/Desktop/POWER/User/Controller/Loop
+    - -IC:/Users/LIAN/Desktop/POWER/User/Storager/Driver
+    - -IC:/Users/LIAN/Desktop/POWER/User/Storager/Param
+    - -IC:/Users/LIAN/Desktop/POWER/User/Storager/Storage
+    - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/protocol/Inc
+    - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/register/Inc
+    - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/transport/uf4com_uart/Inc
+
+Index:
+  Background: Build
+
+Diagnostics:
+  UnusedIncludes: None
+  Suppress:
+    - pp_including_mainfile_in_preamble
+
+---
+If:
+  PathMatch: Doc/.*
+Index:
+  Background: Skip
+

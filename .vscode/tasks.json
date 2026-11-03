@@ -1,0 +1,117 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Keil: 增量编译 (Build)",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$uv = 'C:\\Users\\LIAN\\AppData\\Local\\Keil_v5\\UV4\\UV4.exe'; $proj = '${workspaceFolder}\\MDK-ARM\\POWER.uvprojx'; $log = '${workspaceFolder}\\MDK-ARM\\build_log.txt'; New-Item -ItemType File -Path $log -Force | Out-Null; Write-Host '>>> 开始 Keil 增量编译 (Build)...' -ForegroundColor Cyan; $p = Start-Process -FilePath $uv -ArgumentList \"-b `\"$proj`\" -j0 -o `\"$log`\"\" -PassThru; $n = 0; while (-not $p.HasExited) { $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Start-Sleep -Milliseconds 50 }; $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Remove-Item $log -Force -ErrorAction SilentlyContinue; if ($p.ExitCode -le 1) { Write-Host '>>> 编译成功!' -ForegroundColor Green; exit 0 } else { Write-Host \">>> 编译失败 (ExitCode: $($p.ExitCode))\" -ForegroundColor Red; exit $p.ExitCode }"
+            ],
+            "options": {
+                "statusbar": {
+                    "hide": false,
+                    "label": "$(tools) 编译",
+                    "detail": "Keil 增量编译 (Build)"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": {
+                "owner": "keil-armclang",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/MDK-ARM"
+                ],
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(error|warning):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            }
+        },
+        {
+            "label": "Keil: 全量重编译 (Rebuild)",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$uv = 'C:\\Users\\LIAN\\AppData\\Local\\Keil_v5\\UV4\\UV4.exe'; $proj = '${workspaceFolder}\\MDK-ARM\\POWER.uvprojx'; $log = '${workspaceFolder}\\MDK-ARM\\build_log.txt'; New-Item -ItemType File -Path $log -Force | Out-Null; Write-Host '>>> 开始 Keil 全量重编译 (Rebuild)...' -ForegroundColor Cyan; $p = Start-Process -FilePath $uv -ArgumentList \"-r `\"$proj`\" -j0 -o `\"$log`\"\" -PassThru; $n = 0; while (-not $p.HasExited) { $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Start-Sleep -Milliseconds 50 }; $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Remove-Item $log -Force -ErrorAction SilentlyContinue; if ($p.ExitCode -le 1) { Write-Host '>>> 全量重编译成功!' -ForegroundColor Green; exit 0 } else { Write-Host \">>> 全量重编译失败 (ExitCode: $($p.ExitCode))\" -ForegroundColor Red; exit $p.ExitCode }"
+            ],
+            "options": {
+                "statusbar": {
+                    "hide": false,
+                    "label": "$(sync) 重编译",
+                    "detail": "Keil 全量重编译 (Rebuild)"
+                }
+            },
+            "group": "build",
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            },
+            "problemMatcher": {
+                "owner": "keil-armclang",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/MDK-ARM"
+                ],
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(error|warning):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            }
+        },
+        {
+            "label": "Keil: 下载烧录 (Flash)",
+            "type": "process",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "$uv = 'C:\\Users\\LIAN\\AppData\\Local\\Keil_v5\\UV4\\UV4.exe'; $proj = '${workspaceFolder}\\MDK-ARM\\POWER.uvprojx'; $log = '${workspaceFolder}\\MDK-ARM\\build_log.txt'; New-Item -ItemType File -Path $log -Force | Out-Null; Write-Host '>>> 开始烧录固件 (Flash)...' -ForegroundColor Cyan; $p = Start-Process -FilePath $uv -ArgumentList \"-f `\"$proj`\" -o `\"$log`\"\" -PassThru; $n = 0; while (-not $p.HasExited) { $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Start-Sleep -Milliseconds 50 }; $lines = @(Get-Content $log -ErrorAction SilentlyContinue); while ($n -lt $lines.Count) { Write-Host $lines[$n]; $n++ }; Remove-Item $log -Force -ErrorAction SilentlyContinue; if ($p.ExitCode -eq 0) { Write-Host '>>> 烧录成功!' -ForegroundColor Green; exit 0 } else { Write-Host \">>> 烧录失败 (ExitCode: $($p.ExitCode))\" -ForegroundColor Red; exit $p.ExitCode }"
+            ],
+            "options": {
+                "statusbar": {
+                    "hide": false,
+                    "label": "$(zap) 烧录",
+                    "detail": "Keil 下载固件 (Flash)"
+                }
+            },
+            "group": "build",
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "clear": true
+            }
+        }
+    ]
+}

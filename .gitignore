@@ -1,0 +1,61 @@
+# ==============================================================================
+# 1. Keil MDK-ARM 编译输出与临时文件
+# ==============================================================================
+MDK-ARM/POWER/
+MDK-ARM/DebugConfig/
+MDK-ARM/RTE/
+MDK-ARM/EventRecorderStub.scvd
+MDK-ARM/build_log.txt
+*.uvguix.*
+*.uvgui.*
+*.bak
+*.ddk
+*.edk
+*.lst
+*.lnp
+*.mpf
+*.mpj
+*.obj
+*.omf
+*.plg
+*.rpt
+*.tmp
+*.__i
+*.crf
+*.o
+*.d
+*.axf
+*.tra
+*.dep
+*.iex
+*.htm
+*.map
+JLinkLog.txt
+
+# ==============================================================================
+# 2. clangd 索引缓存
+# ==============================================================================
+.cache/
+
+# ==============================================================================
+# 3. 参考工程归档备份（137 MB，仅保留原理图与硬件总结文档）
+# ==============================================================================
+Doc/UF4DigitalPower-main/
+
+# ==============================================================================
+# 4. Drivers 中未使用的 CMSIS 子模块与其他芯片头文件（约 60 MB）
+# ==============================================================================
+Drivers/CMSIS/DSP/
+Drivers/CMSIS/NN/
+Drivers/CMSIS/RTOS/
+Drivers/CMSIS/RTOS2/
+Drivers/CMSIS/Core/
+Drivers/CMSIS/Core_A/
+Drivers/CMSIS/Lib/
+Drivers/CMSIS/Documentation/
+Drivers/CMSIS/docs/
+Drivers/CMSIS/*.txt
+Drivers/CMSIS/*.xml
+Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4*.h
+!Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h
+!Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g474xx.h
