@@ -38,6 +38,7 @@ typedef struct {
     uint16_t forward_iout_adc;
     uint16_t reverse_iout_adc;
     uint16_t duty_base_q15;
+    uint16_t duty_max_q15;
     uint16_t iref_mA;
     control_direction_t direction;
     control_region_t region;

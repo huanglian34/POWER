@@ -41,14 +41,43 @@ static bool internal_erase(void *context, uint32_t address, size_t length)
     uint32_t page_error = 0u;
     HAL_StatusTypeDef result;
     (void)context;
-    if (!valid_range(address, length) || (length == 0u) ||
-        ((address % FLASH_PAGE_SIZE) != 0u) ||
-        ((length % FLASH_PAGE_SIZE) != 0u)) return false;
+    if (!valid_range(address, length) || (length == 0u)) return false;
 
     erase.TypeErase = FLASH_TYPEERASE_PAGES;
+#if defined(FLASH_OPTR_DBANK)
+    if (READ_BIT(FLASH->OPTR, FLASH_OPTR_DBANK) == 0u)
+    {
+        if (((address % FLASH_PAGE_SIZE_128_BITS) != 0u) ||
+            ((length % FLASH_PAGE_SIZE_128_BITS) != 0u)) return false;
+        erase.Banks = FLASH_BANK_1;
+        erase.Page = address / FLASH_PAGE_SIZE_128_BITS;
+        erase.NbPages = length / FLASH_PAGE_SIZE_128_BITS;
+    }
+    else
+    {
+        const uint32_t bank_size = PARAM_INTERNAL_FLASH_SIZE / 2u;
+        if (((address % FLASH_PAGE_SIZE) != 0u) ||
+            ((length % FLASH_PAGE_SIZE) != 0u)) return false;
+        if (address < bank_size)
+        {
+            if (((uint64_t)address + length) > bank_size) return false;
+            erase.Banks = FLASH_BANK_1;
+            erase.Page = address / FLASH_PAGE_SIZE;
+        }
+        else
+        {
+            erase.Banks = FLASH_BANK_2;
+            erase.Page = (address - bank_size) / FLASH_PAGE_SIZE;
+        }
+        erase.NbPages = length / FLASH_PAGE_SIZE;
+    }
+#else
+    if (((address % FLASH_PAGE_SIZE) != 0u) ||
+        ((length % FLASH_PAGE_SIZE) != 0u)) return false;
     erase.Banks = FLASH_BANK_1;
     erase.Page = address / FLASH_PAGE_SIZE;
     erase.NbPages = length / FLASH_PAGE_SIZE;
+#endif
 
     if (HAL_FLASH_Unlock() != HAL_OK) return false;
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
@@ -112,7 +141,7 @@ const ParamStorageBackend_t g_internal_flash_backend =
     .erase = internal_erase,
     .context = NULL,
     .total_size = PARAM_INTERNAL_FLASH_SIZE,
-    .erase_size = FLASH_PAGE_SIZE,
+    .erase_size = 0x1000u,
     .write_size = 8u
 };
 

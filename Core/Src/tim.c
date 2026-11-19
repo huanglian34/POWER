@@ -164,7 +164,8 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     /* TIM6 clock enable */
     __HAL_RCC_TIM6_CLK_ENABLE();
   /* USER CODE BEGIN TIM6_MspInit 1 */
-
+    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 3, 0);
+    HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
   /* USER CODE END TIM6_MspInit 1 */
   }
   else if(tim_baseHandle->Instance==TIM7)
@@ -233,7 +234,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /* Peripheral clock disable */
     __HAL_RCC_TIM6_CLK_DISABLE();
   /* USER CODE BEGIN TIM6_MspDeInit 1 */
-
+    HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
   /* USER CODE END TIM6_MspDeInit 1 */
   }
   else if(tim_baseHandle->Instance==TIM7)

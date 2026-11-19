@@ -6,7 +6,7 @@
 
 #define TEMPERATURE_SENSOR_INVALID UINT16_MAX
 
-/* 10 kOhm NTC, B=3950, 3 kOhm divider. */
+/* 10 kOhm NTC (103F3380), B=3380, 10 kOhm divider. */
 uint16_t TemperatureSensor_FromAdc(uint16_t raw, bool ntc_to_ground);
 
 #endif

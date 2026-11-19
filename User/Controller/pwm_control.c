@@ -1,14 +1,20 @@
 #include "pwm_control.h"
+#include "control_config.h"
 #include "main.h"
 
 #define PWM_PERIOD 27200u
+/* STM32G474 HRTIM at MUL32 requires CMPx >= 0x0060 (96) and <= PER - 0x0020
+ * for a compare match to fire; values < 96 are ignored by hardware and cause
+ * 100% duty pass-through. Use 128 ticks margin on both ends. */
+#define PWM_CMP_MIN 128u
+#define PWM_CMP_MAX (PWM_PERIOD - 128u)
 #define PWM_OUTPUTS (HRTIM_OUTPUT_TE1 | HRTIM_OUTPUT_TE2 | HRTIM_OUTPUT_TF1 | HRTIM_OUTPUT_TF2)
 #define PWM_TIMERS (HRTIM_TIMERID_MASTER | HRTIM_TIMERID_TIMER_E | HRTIM_TIMERID_TIMER_F)
 
 /* Gate drive remains inhibited until the four waveforms and fault response
    are checked on the actual board with a current-limited supply. */
 #ifndef CONTROL_POWER_STAGE_VALIDATED
-#define CONTROL_POWER_STAGE_VALIDATED 0
+#define CONTROL_POWER_STAGE_VALIDATED CONTROL_TEST_STANDALONE
 #endif
 
 static HRTIM_HandleTypeDef *s_hrtim;
@@ -25,8 +31,8 @@ void PwmControl_Init(HRTIM_HandleTypeDef *h)
     if (h != NULL)
     {
         (void)HAL_HRTIM_WaveformOutputStop(h, PWM_OUTPUTS);
-        h->Instance->sMasterRegs.MCMP1R = 1u;
-        h->Instance->sMasterRegs.MCMP4R = 1u;
+        h->Instance->sMasterRegs.MCMP1R = PWM_CMP_MIN;
+        h->Instance->sMasterRegs.MCMP4R = PWM_CMP_MIN;
         if (HAL_HRTIM_WaveformCountStart_IT(h, PWM_TIMERS) != HAL_OK)
             Error_Handler();
     }
@@ -68,8 +74,8 @@ HAL_StatusTypeDef PwmControl_SetDutyQ15(uint16_t duty_q15)
     if (s_hrtim == NULL) return HAL_ERROR;
     if (duty_q15 > 32767u) duty_q15 = 32767u;
     active = ((uint32_t)duty_q15 * PWM_PERIOD + 16384u) / 32768u;
-    if (active == 0u) active = 1u;
-    if (active >= PWM_PERIOD) active = PWM_PERIOD - 1u;
+    if (active < PWM_CMP_MIN) active = PWM_CMP_MIN;
+    if (active > PWM_CMP_MAX) active = PWM_CMP_MAX;
 
     /* E1/F1 drive the high sides. Boost switches the complementary low side. */
     if (s_direction == CONTROL_DIRECTION_FORWARD)

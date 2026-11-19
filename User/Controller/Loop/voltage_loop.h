@@ -26,6 +26,9 @@ void VoltageLoop_SetGains_Q16_Q30(int32_t kp_q16, int32_t ki_ts_q30);
 void VoltageLoop_SetCurrentLimit_mA(uint16_t current_limit_mA);
 
 CONTROL_RAMFUNC uint16_t VoltageLoop_Update(const voltage_loop_sample_t *sample);
+CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV,
+                                                uint32_t vref_mV, uint8_t enable,
+                                                uint8_t current_limited);
 const voltage_loop_result_t *VoltageLoop_GetLastResult(void);
 
 #endif /* VOLTAGE_LOOP_H */

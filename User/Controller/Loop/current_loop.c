@@ -117,24 +117,27 @@ CONTROL_RAMFUNC uint16_t CurrentLoop_Update(const current_loop_sample_t *sample)
     b0 = sample->b0_q15;
 
     /* y[n] = 2^R * (B0*e[n] + B0*e[n-1] + A1*y[n-1]) / 32768. */
-    controller_sum = (int32_t)b0 * error_q15 +
-                     (int32_t)b0 * s_current_loop.error_q15 +
-                     16384L * s_current_loop.output_q15;
-    output_q15 = (int32_t)((controller_sum * 2LL) / 32768LL);
+    controller_sum = (int64_t)b0 * error_q15 +
+                     (int64_t)b0 * s_current_loop.error_q15 +
+                     16384LL * s_current_loop.output_q15;
+    output_q15 = (int32_t)(controller_sum >> 14);
     output_q15 = clamp_i32(output_q15, -32768, 32767);
     duty_q15 = (int32_t)sample->duty_base_q15 +
-               (output_q15 * CONTROL_DUTY_SCALE_Q15) / 32768;
+               ((output_q15 * CONTROL_DUTY_SCALE_Q15) >> 15);
 
     if (!sample->enable) {
         duty_q15 = sample->duty_base_q15;
         output_q15 = 0;
     }
 
-    s_last_result.saturated =
-        (duty_q15 <= CONTROL_DUTY_MIN_Q15 ||
-         duty_q15 >= CONTROL_DUTY_MAX_Q15) ? 1u : 0u;
-    duty_q15 = clamp_i32(duty_q15, CONTROL_DUTY_MIN_Q15,
-                         CONTROL_DUTY_MAX_Q15);
+    {
+        int32_t duty_hi = (sample->duty_max_q15 < CONTROL_DUTY_MAX_Q15) ?
+                          (int32_t)sample->duty_max_q15 : CONTROL_DUTY_MAX_Q15;
+        s_last_result.saturated =
+            (duty_q15 <= CONTROL_DUTY_MIN_Q15 ||
+             duty_q15 >= duty_hi) ? 1u : 0u;
+        duty_q15 = clamp_i32(duty_q15, CONTROL_DUTY_MIN_Q15, duty_hi);
+    }
 
     if (s_last_result.saturated) {
         /* Back-calculate the normalized controller state at the PWM limit. */

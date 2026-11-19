@@ -31,6 +31,11 @@
 #define CONTROL_CURRENT_LOOP_HZ    100000u
 #define CONTROL_VOLTAGE_LOOP_HZ     10000u
 
+/* Standalone bring-up test mode (no NTC soldered, no UART host, default 12V auto-start).
+ * Set to 0 once NTCs and UART host control are connected. */
+#define CONTROL_TEST_STANDALONE    1
+#define CONTROL_TEST_VSET_10MV     1200u
+
 /* Outer-loop defaults: approximately 0.5 Hz crossover on 470 uF. */
 /* Kp is mA/mV in Q16; Ki*Ts is (mA/mV)/sample in Q30. */
 #define CONTROL_VOLTAGE_KP_Q16       96900L

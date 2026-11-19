@@ -25,6 +25,7 @@ typedef struct {
 
 static voltage_loop_state_t s_voltage_loop;
 static voltage_loop_result_t s_voltage_result;
+static int64_t s_cv_integral_q16_mV;
 
 CONTROL_FORCE_INLINE int32_t clamp_i32(int32_t value, int32_t low, int32_t high)
 {
@@ -51,6 +52,7 @@ CONTROL_RAMFUNC void VoltageLoop_Init(void)
 CONTROL_RAMFUNC void VoltageLoop_Reset(void)
 {
     s_voltage_loop.integral_q16_mA = 0;
+    s_cv_integral_q16_mV = 0;
     s_voltage_result.current_reference_mA = 0u;
     s_voltage_result.voltage_error_mV = 0;
     s_voltage_result.proportional_mA = 0;
@@ -142,6 +144,56 @@ CONTROL_RAMFUNC uint16_t VoltageLoop_Update(const voltage_loop_sample_t *sample)
         (int32_t)(s_voltage_loop.integral_q16_mA >> 16);
     s_voltage_result.saturated = saturated;
     return s_voltage_result.current_reference_mA;
+}
+
+CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV,
+                                                uint32_t vref_mV, uint8_t enable,
+                                                uint8_t current_limited)
+{
+    int32_t error_mV;
+    int64_t prop_q16, step_q16, vcmd_q16;
+    int64_t vcmd_min_q16, vcmd_max_q16;
+    int32_t vcmd_mV;
+    uint32_t duty_q15;
+    uint8_t is_boost;
+
+    if (!enable || vin_mV < CONTROL_VIN_MIN_MV || vin_mV > CONTROL_VIN_MAX_MV ||
+        vref_mV == 0u || vref_mV > CONTROL_VOUT_MAX_MV || vout_mV > CONTROL_VOUT_MAX_MV)
+    {
+        s_cv_integral_q16_mV = 0;
+        return 0u;
+    }
+
+    is_boost = (vout_mV > vin_mV) ? 1u : 0u;
+    vcmd_min_q16 = is_boost ? ((int64_t)vin_mV << 16) : 0LL;
+    vcmd_max_q16 = is_boost ? ((int64_t)CONTROL_VOUT_MAX_MV << 16) : ((int64_t)vin_mV << 16);
+
+    error_mV = (int32_t)vref_mV - (int32_t)vout_mV;
+    prop_q16 = (int64_t)655L * error_mV;
+    step_q16 = ((int64_t)337326L * error_mV) >> 14;
+    vcmd_q16 = ((int64_t)vref_mV << 16) + prop_q16 + s_cv_integral_q16_mV + step_q16;
+
+    if ((!current_limited || error_mV < 0) &&
+        !((vcmd_q16 > vcmd_max_q16 && error_mV > 0) ||
+          (vcmd_q16 < vcmd_min_q16 && error_mV < 0)))
+    {
+        s_cv_integral_q16_mV = clamp_i64(
+            s_cv_integral_q16_mV + step_q16,
+            -((int64_t)CONTROL_VOUT_MAX_MV << 16),
+            ((int64_t)CONTROL_VOUT_MAX_MV << 16));
+    }
+
+    vcmd_q16 = clamp_i64(((int64_t)vref_mV << 16) + prop_q16 + s_cv_integral_q16_mV,
+                         vcmd_min_q16, vcmd_max_q16);
+    vcmd_mV = (int32_t)(vcmd_q16 >> 16);
+
+    if (!is_boost)
+        duty_q15 = ((uint32_t)vcmd_mV * 32767u) / vin_mV;
+    else
+        duty_q15 = (vcmd_mV <= (int32_t)vin_mV) ? 0u :
+            (((uint32_t)(vcmd_mV - (int32_t)vin_mV) * 32767u) / (uint32_t)vcmd_mV);
+
+    return (duty_q15 > CONTROL_DUTY_MAX_Q15) ? CONTROL_DUTY_MAX_Q15 : (uint16_t)duty_q15;
 }
 
 const voltage_loop_result_t *VoltageLoop_GetLastResult(void)

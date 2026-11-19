@@ -33,39 +33,44 @@ typedef struct
     uint16_t iin_gain, iin_offset, iout_gain, iout_offset, fan_set_permille;
     uint8_t direction, enable;
 } control_settings_t;
-static control_settings_t s_settings;
-static power_mode_t s_mode;
+control_settings_t s_settings;
+power_mode_t s_mode;
 static volatile uint8_t s_save_pending;
 static uint8_t s_rx_byte;
 static uint8_t s_rx_ring[256];
 static volatile uint8_t s_rx_head, s_rx_tail;
 static uint16_t s_input_voltage_value, s_input_voltage_raw_value;
-static uint16_t s_input_current_value, s_input_current_raw_value;
+uint16_t s_input_current_value;
+static uint16_t s_input_current_raw_value;
 static uint16_t s_output_voltage_value, s_output_voltage_raw_value;
-static uint16_t s_state_value, s_fault_value, s_flags_value, s_direction_value;
+uint16_t s_flags_value;
+static uint16_t s_state_value, s_fault_value, s_direction_value;
 static uint16_t s_cc_cv_value, s_converter_mode_value;
 static uint16_t s_fmac_first_value, s_fmac_second_value, s_fmac_stage_value, s_fmac_status_value;
 static uint16_t s_dac3_value, s_dac4_value, s_fan_speed_value;
-static uint16_t s_isr_last_value, s_isr_max_value, s_isr_overrun_value;
+uint16_t s_isr_last_value, s_isr_max_value, s_isr_overrun_value;
 static uint16_t s_state_machine_value, s_self_check_value, s_latched_fault_value;
-static uint16_t s_core_temperature_value, s_temp1_value, s_temp2_value;
-static uint16_t s_input_current_raw_value, s_output_current_raw_value;
-static uint16_t s_output_current_value, s_current_feedback_value;
+uint16_t s_core_temperature_value, s_temp1_value, s_temp2_value;
+static uint16_t s_output_current_raw_value;
+uint16_t s_output_current_value;
+static uint16_t s_current_feedback_value;
 static uint16_t s_current_reference_value, s_voltage_current_reference_value;
-static uint16_t s_duty_command_value;
+uint16_t s_duty_command_value;
 static uint8_t s_tx_buffer[UF4_MAX_FRAME_LEN];
 static volatile uint16_t s_adc_samples[4];
-static volatile uint16_t s_adc2_sample, s_adc3_sample, s_adc4_sample;
+static volatile uint16_t s_adc2_sample, s_adc3_sample;
+volatile uint16_t s_adc4_sample;
 static volatile uint16_t s_adc5_samples[2];
 static volatile uint32_t s_adc1_last_sample_tick;
-static volatile uint32_t s_adc1_sample_count;
+volatile uint32_t s_adc1_sample_count;
 static volatile uint32_t s_adc5_sample_count, s_adc5_last_sample_tick;
-static volatile uint32_t s_fast_tick_count, s_outer_tick_count;
+volatile uint32_t s_fast_tick_count, s_outer_tick_count;
 static volatile uint16_t s_fast_early_max_cycles;
-static volatile uint32_t s_input_voltage_mV, s_output_voltage_mV;
-static volatile uint16_t s_current_reference_mA;
-static volatile int16_t s_current_b0_q15;
-static volatile uint16_t s_protection_zero_adc;
+volatile uint32_t s_input_voltage_mV, s_output_voltage_mV;
+volatile uint16_t s_current_reference_mA;
+volatile uint16_t s_voltage_duty_limit_q15;
+volatile int16_t s_current_b0_q15;
+volatile uint16_t s_protection_zero_adc;
 static uint16_t s_zero_candidate_adc;
 static uint32_t s_zero_candidate_tick;
 static volatile uint8_t s_control_ready, s_fast_enabled, s_adc5_ready;
@@ -77,7 +82,7 @@ static uint8_t s_previous_enable;
 
 #define CONTROL_COMM_TIMEOUT_MS 500u
 #define CONTROL_ADC_TIMEOUT_MS 20u
-#define CONTROL_ZERO_DRIFT_LIMIT_ADC 64u
+#define CONTROL_ZERO_DRIFT_LIMIT_ADC 128u
 #define CONTROL_ZERO_STABLE_LIMIT_ADC 16u
 #define CONTROL_ZERO_SETTLE_MS 50u
 #define CONTROL_ISR_BUDGET_CYCLES (SystemCoreClock / CONTROL_CURRENT_LOOP_HZ)
@@ -93,8 +98,8 @@ static uint32_t voltage_mV(uint16_t raw, uint16_t upper, uint16_t lower,
                            uint16_t gain_centi, uint16_t offset_centi_v)
 {
     uint64_t numerator = (uint64_t)raw * s_settings.adc_vref_10mV * 10u *
-                         ((uint32_t)upper + lower) * gain_centi;
-    return lower == 0u ? 0u :
+                         (uint32_t)upper * gain_centi;
+    return (lower == 0u || upper == 0u) ? 0u :
         (uint32_t)(numerator / (4095ULL * lower * 100u)) +
         (uint32_t)offset_centi_v * 10u;
 }
@@ -156,7 +161,7 @@ static protection_settings_t protection_settings(void)
     {id,name,PARAM_TYPE_U8,group,PARAM_FLAG_READ|PARAM_FLAG_WRITE|PARAM_FLAG_RUNTIME,PARAM_STORAGE_INTERNAL,0,1,0,1,ptr,NULL,NULL,NULL}
 
 static const ParamDescriptor_t s_param_table[] = {
-    APP_RW_U16(UF4_ID_SET_VOLTAGE_LIMIT,"set_voltage_10mV",PARAM_GROUP_OUTPUT,0,7000,500,&s_settings.vset_10mV),
+    APP_RW_U16(UF4_ID_SET_VOLTAGE_LIMIT,"set_voltage_10mV",PARAM_GROUP_OUTPUT,0,7000,1200,&s_settings.vset_10mV),
     APP_RW_U16(UF4_ID_SET_CURRENT_LIMIT,"set_current_10mA",PARAM_GROUP_OUTPUT,0,1000,100,&s_settings.iset_10mA),
     APP_RW_U16(UF4_ID_OCP_SET_VALUE,"ocp_10mA",PARAM_GROUP_PROTECTION,1,1000,1000,&s_settings.ocp_10mA),
     APP_RW_U16(UF4_ID_OTP_SET_VALUE,"otp_centi_c",PARAM_GROUP_PROTECTION,4000,15000,12000,&s_settings.otp_centi_c),
@@ -302,13 +307,15 @@ static void pwm_on(void *user)
         s_input_voltage_mV > CONTROL_VIN_MAX_MV ||
         s_output_voltage_mV > CONTROL_VOUT_MAX_MV ||
         s_current_b0_q15 == 0 ||
+#if !CONTROL_TEST_STANDALONE
         s_temp1_value == TEMPERATURE_SENSOR_INVALID ||
         s_temp2_value == TEMPERATURE_SENSOR_INVALID ||
         s_temp1_value >= s_settings.otp_centi_c ||
         s_temp2_value >= s_settings.otp_centi_c ||
-        (uint32_t)(HAL_GetTick() - s_adc1_last_sample_tick) > CONTROL_ADC_TIMEOUT_MS ||
-        (uint32_t)(HAL_GetTick() - s_adc5_last_sample_tick) > 500u ||
-        (uint32_t)(HAL_GetTick() - s_last_frame_tick) > CONTROL_COMM_TIMEOUT_MS)
+        (int32_t)(HAL_GetTick() - s_adc5_last_sample_tick) > 500 ||
+        (int32_t)(HAL_GetTick() - s_last_frame_tick) > (int32_t)CONTROL_COMM_TIMEOUT_MS ||
+#endif
+        (int32_t)(HAL_GetTick() - s_adc1_last_sample_tick) > (int32_t)CONTROL_ADC_TIMEOUT_MS)
     {
         PowerMode_ReportFault(&s_mode, POWER_FAULT_ADC);
         return;
@@ -325,19 +332,21 @@ static bool self_check(void *user)
            s_adc1_sample_count != 0u &&
            s_adc4_sample > 1000u && s_adc4_sample < 3000u &&
            s_adc5_sample_count != 0u &&
+#if !CONTROL_TEST_STANDALONE
            s_temp1_value != TEMPERATURE_SENSOR_INVALID &&
            s_temp2_value != TEMPERATURE_SENSOR_INVALID &&
            s_temp1_value < s_settings.otp_centi_c &&
            s_temp2_value < s_settings.otp_centi_c &&
+#endif
            !ProtectionControl_IsTripActive() &&
-           (uint32_t)(HAL_GetTick()-s_adc1_last_sample_tick) <= CONTROL_ADC_TIMEOUT_MS;
+           (int32_t)(HAL_GetTick()-s_adc1_last_sample_tick) <= (int32_t)CONTROL_ADC_TIMEOUT_MS;
 }
 static void update_telemetry(void)
 {
     const current_loop_result_t *current=CurrentLoop_GetLastResult();
     const voltage_loop_result_t *voltage=VoltageLoop_GetLastResult();
     uint16_t input_index=(PowerMode_GetDirection(&s_mode)==CONTROL_DIRECTION_FORWARD)?0u:1u;
-    uint16_t output_index=(PowerMode_GetDirection(&s_mode)==CONTROL_DIRECTION_FORWARD)?3u:2u;
+    uint16_t output_index=(PowerMode_GetDirection(&s_mode)==CONTROL_DIRECTION_FORWARD)?2u:3u;
     s_state_value=(uint16_t)PowerMode_GetState(&s_mode);
     s_fault_value=(uint16_t)PowerMode_GetFault(&s_mode);
     s_flags_value=(uint16_t)(PowerMode_GetFlagBits(&s_mode) |
@@ -386,6 +395,10 @@ void ControlApp_Init(void)
     st=Param_Load();
     if (st==PARAM_ERROR_NOT_FOUND) (void)Param_Commit();
     else if (st!=PARAM_OK) Error_Handler();
+#if CONTROL_TEST_STANDALONE
+    s_settings.vset_10mV = CONTROL_TEST_VSET_10MV;
+    s_settings.enable = 1u;
+#endif
     if (HAL_IWDG_Refresh(&hiwdg) != HAL_OK) Error_Handler();
     if (ParamUF4COM_Bind()!=PARAM_OK) Error_Handler();
     UF4_InitEx(NULL,tx_uart,&huart1);
@@ -497,6 +510,7 @@ void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t time
 {
     static uint32_t previous_sample_count;
     static uint8_t missing_samples;
+    static uint8_t bad_adc_samples;
     current_loop_sample_t sample;
     uint32_t start_cycles, vin, vout;
     uint16_t duty;
@@ -505,10 +519,15 @@ void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t time
         return;
     start_cycles = DWT->CYCCNT;
     s_fast_tick_count++;
-    if (s_adc1_sample_count == previous_sample_count)
+    if (!s_fast_enabled)
     {
-        if (missing_samples < 3u) missing_samples++;
-        if (missing_samples >= 3u && s_fast_enabled)
+        missing_samples = 0u;
+        bad_adc_samples = 0u;
+    }
+    else if (s_adc1_sample_count == previous_sample_count)
+    {
+        if (missing_samples < 20u) missing_samples++;
+        if (missing_samples >= 20u)
         {
             s_pending_fault = POWER_FAULT_ADC;
             s_fast_enabled = 0u;
@@ -526,9 +545,13 @@ void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t time
     {
         if (s_fast_enabled)
         {
-            s_pending_fault = POWER_FAULT_ADC;
-            s_fast_enabled = 0u;
-            (void)PwmControl_Disable();
+            if (bad_adc_samples < 100u) bad_adc_samples++;
+            if (bad_adc_samples >= 100u)
+            {
+                s_pending_fault = POWER_FAULT_ADC;
+                s_fast_enabled = 0u;
+                (void)PwmControl_Disable();
+            }
         }
         uint32_t cycles = DWT->CYCCNT - start_cycles;
         if (cycles > s_fast_early_max_cycles)
@@ -537,6 +560,7 @@ void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t time
             s_isr_overrun_value++;
         return;
     }
+    bad_adc_samples = 0u;
     sample.direction = s_fast_direction;
     sample.region = (vout <= vin) ? CONTROL_REGION_BUCK : CONTROL_REGION_BOOST;
     sample.vin_mV = vin;
@@ -544,12 +568,13 @@ void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t time
     sample.vref_adc = s_adc4_sample;
     sample.adc_vdda_mV = (uint16_t)(s_settings.adc_vref_10mV * 10u);
     sample.b0_q15 = s_current_b0_q15;
-    sample.forward_iout_adc = s_adc_samples[3];
-    sample.reverse_iout_adc = s_adc_samples[2];
+    sample.forward_iout_adc = s_adc_samples[2];
+    sample.reverse_iout_adc = s_adc_samples[3];
     sample.iref_mA = s_current_reference_mA;
     sample.duty_base_q15 = (uint16_t)((sample.region == CONTROL_REGION_BUCK) ?
-        ((uint64_t)vout * 32767u / vin) :
-        ((uint64_t)(vout - vin) * 32767u / vout));
+        (((uint32_t)vout * 32767u) / vin) :
+        (((uint32_t)(vout - vin) * 32767u) / vout));
+    sample.duty_max_q15 = s_voltage_duty_limit_q15;
     sample.enable = s_fast_enabled && s_pending_fault == POWER_FAULT_NONE;
     PwmControl_SetMode(sample.direction, sample.region);
     duty = sample.enable ? CurrentLoop_Update(&sample) : sample.duty_base_q15;
@@ -580,10 +605,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim)
         s_fast_enabled = 0u;
         (void)PwmControl_Disable();
     }
-    vin_pin = voltage_mV(s_adc2_sample,s_settings.vin_r_upper,s_settings.vin_r_lower,
-                        s_settings.vin_gain,s_settings.vin_offset);
-    vout_pin = voltage_mV(s_adc3_sample,s_settings.vout_r_upper,s_settings.vout_r_lower,
-                         s_settings.vout_gain,s_settings.vout_offset);
+    {
+        static uint32_t vin_filt_mV, vout_filt_mV;
+        static uint8_t v_filt_init;
+        uint32_t vin_raw_mV = voltage_mV(s_adc2_sample,s_settings.vin_r_upper,s_settings.vin_r_lower,
+                            s_settings.vin_gain,s_settings.vin_offset);
+        uint32_t vout_raw_mV = voltage_mV(s_adc3_sample,s_settings.vout_r_upper,s_settings.vout_r_lower,
+                             s_settings.vout_gain,s_settings.vout_offset);
+        if (!v_filt_init)
+        {
+            vin_filt_mV = vin_raw_mV;
+            vout_filt_mV = vout_raw_mV;
+            v_filt_init = 1u;
+        }
+        else
+        {
+            vin_filt_mV = (vin_filt_mV * 3u + vin_raw_mV + 2u) >> 2;
+            vout_filt_mV = (vout_filt_mV * 3u + vout_raw_mV + 2u) >> 2;
+        }
+        vin_pin = vin_filt_mV;
+        vout_pin = vout_filt_mV;
+    }
     if (s_fast_direction == CONTROL_DIRECTION_FORWARD)
     {
         s_input_voltage_mV = vin_pin;
@@ -595,18 +637,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *tim)
         s_output_voltage_mV = vin_pin;
     }
     current_limit = (uint16_t)(s_settings.iset_10mA * 10u);
-    if (s_mode.state == POWER_MODE_SOFT_START)
     {
-        elapsed = HAL_GetTick() - s_mode.state_tick;
-        if (elapsed < 100u)
-            current_limit = (uint16_t)((uint32_t)current_limit * elapsed / 100u);
+        uint32_t vref_mV = (uint32_t)s_settings.vset_10mV * 10u;
+        if (s_mode.state == POWER_MODE_SOFT_START)
+        {
+            elapsed = (HAL_GetTick() - s_mode.state_tick) + 1u;
+            if (elapsed < 100u)
+            {
+                current_limit = (uint16_t)((uint32_t)current_limit * elapsed / 100u);
+                vref_mV = vref_mV * elapsed / 100u;
+            }
+        }
+        sample.voltage_mV = s_output_voltage_mV;
+        sample.reference_mV = vref_mV;
+        sample.current_limit_mA = current_limit;
+        sample.enable = s_fast_enabled && current_limit != 0u &&
+                        s_pending_fault == POWER_FAULT_NONE;
+        s_current_reference_mA = VoltageLoop_Update(&sample);
+        s_voltage_duty_limit_q15 = VoltageLoop_DutyLimit(
+            s_input_voltage_mV, s_output_voltage_mV, vref_mV, sample.enable,
+            (s_current_reference_mA >= current_limit && current_limit != 0u) ? 1u : 0u);
     }
-    sample.voltage_mV = s_output_voltage_mV;
-    sample.reference_mV = (uint32_t)s_settings.vset_10mV * 10u;
-    sample.current_limit_mA = current_limit;
-    sample.enable = s_fast_enabled && current_limit != 0u &&
-                    s_pending_fault == POWER_FAULT_NONE;
-    s_current_reference_mA = VoltageLoop_Update(&sample);
     if (s_input_voltage_mV >= CONTROL_VIN_MIN_MV &&
         s_input_voltage_mV <= CONTROL_VIN_MAX_MV &&
         s_output_voltage_mV <= CONTROL_VOUT_MAX_MV)
@@ -639,14 +690,17 @@ void ControlApp_Process(void)
         PowerMode_ReportFault(&s_mode,s_pending_fault);
         s_pending_fault=POWER_FAULT_NONE;
     }
+#if !CONTROL_TEST_STANDALONE
     if (PowerMode_IsPwmEnabled(&s_mode) &&
         (uint32_t)(now - s_last_frame_tick) > CONTROL_COMM_TIMEOUT_MS)
         PowerMode_ReportFault(&s_mode,POWER_FAULT_COMMUNICATION);
+#endif
     if (PowerMode_IsPwmEnabled(&s_mode) &&
-        (uint32_t)(now - s_adc1_last_sample_tick) > CONTROL_ADC_TIMEOUT_MS)
+        (int32_t)(now - s_adc1_last_sample_tick) > (int32_t)CONTROL_ADC_TIMEOUT_MS)
         PowerMode_ReportFault(&s_mode,POWER_FAULT_ADC);
     if (PowerMode_IsPwmEnabled(&s_mode) && !current_zero_stable())
         PowerMode_ReportFault(&s_mode,POWER_FAULT_ADC);
+#if !CONTROL_TEST_STANDALONE
     if (PowerMode_IsPwmEnabled(&s_mode) &&
         ((uint32_t)(now - s_adc5_last_sample_tick) > 500u ||
          s_temp1_value == TEMPERATURE_SENSOR_INVALID ||
@@ -656,6 +710,7 @@ void ControlApp_Process(void)
         (s_temp1_value >= s_settings.otp_centi_c ||
          s_temp2_value >= s_settings.otp_centi_c))
         PowerMode_ReportFault(&s_mode,POWER_FAULT_OVERTEMPERATURE);
+#endif
     if (PowerMode_IsPwmEnabled(&s_mode) && ProtectionControl_IsTripActive())
     {
         uint16_t status=ProtectionControl_GetStatus();

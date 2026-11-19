@@ -125,7 +125,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  // ControlApp_Init();
+  ControlApp_Init();
 
   /* USER CODE END 2 */
 
@@ -136,7 +136,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    // ControlApp_Process();
+    ControlApp_Process();
   }
   /* USER CODE END 3 */
 }

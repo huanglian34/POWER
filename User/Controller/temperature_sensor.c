@@ -1,11 +1,11 @@
 #include "temperature_sensor.h"
 
-/* Nominal ADC codes at 0..150 C in 5 C steps with the NTC to ground. */
+/* Nominal ADC codes at 0..150 C in 5 C steps with 10k B=3380 NTC to ground and 10k pull-up. */
 static const uint16_t s_ntc_codes[] = {
-    3760, 3670, 3565, 3443, 3304, 3150, 2982, 2803,
-    2615, 2423, 2230, 2040, 1856, 1680, 1514, 1360,
-    1218, 1089, 972, 867, 773, 689, 614, 548,
-    489, 437, 392, 351, 315, 284, 256
+    3024, 2839, 2644, 2445, 2245, 2048, 1857, 1675,
+    1505, 1347, 1203, 1072,  954,  849,  755,  672,
+     598,  533,  476,  425,  380,  341,  306,  276,
+     249,  224,  203,  184,  167,  152,  139
 };
 
 uint16_t TemperatureSensor_FromAdc(uint16_t raw, bool ntc_to_ground)

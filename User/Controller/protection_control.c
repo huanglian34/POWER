@@ -51,8 +51,8 @@ static uint16_t voltage_to_dac_code(uint16_t voltage_10mV, uint16_t r_upper_100o
         return PROTECTION_DAC_MAX_CODE;
 
     return clamp_dac_code((voltage_mV * r_lower_100ohm * PROTECTION_DAC_MAX_CODE +
-                           ((uint64_t)(r_upper_100ohm + (uint32_t)r_lower_100ohm) * vref_mV / 2u)) /
-                          ((uint64_t)(r_upper_100ohm + (uint32_t)r_lower_100ohm) * vref_mV));
+                           ((uint64_t)r_upper_100ohm * vref_mV / 2u)) /
+                          ((uint64_t)r_upper_100ohm * vref_mV));
 }
 
 bool ProtectionControl_Apply(const protection_settings_t *settings)

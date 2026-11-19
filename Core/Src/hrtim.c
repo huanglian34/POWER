@@ -79,23 +79,25 @@ void MX_HRTIM1_Init(void)
     Error_Handler();
   }
   pEventCfg.Source = HRTIM_EEV3SRC_COMP6_OUT;
-  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_LOW;
+  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_HIGH;
   if (HAL_HRTIM_EventConfig(&hhrtim1, HRTIM_EVENT_3, &pEventCfg) != HAL_OK)
   {
     Error_Handler();
   }
   pEventCfg.Source = HRTIM_EEV4SRC_COMP1_OUT;
+  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_HIGH;
   if (HAL_HRTIM_EventConfig(&hhrtim1, HRTIM_EVENT_4, &pEventCfg) != HAL_OK)
   {
     Error_Handler();
   }
   pEventCfg.Source = HRTIM_EEV5SRC_COMP3_OUT;
-  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_HIGH;
+  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_LOW;
   if (HAL_HRTIM_EventConfig(&hhrtim1, HRTIM_EVENT_5, &pEventCfg) != HAL_OK)
   {
     Error_Handler();
   }
   pEventCfg.Source = HRTIM_EEV10SRC_COMP7_OUT;
+  pEventCfg.Polarity = HRTIM_EVENTPOLARITY_LOW;
   pEventCfg.Filter = HRTIM_EVENTFILTER_NONE;
   if (HAL_HRTIM_EventConfig(&hhrtim1, HRTIM_EVENT_10, &pEventCfg) != HAL_OK)
   {
@@ -107,7 +109,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_3, 0x0) != HAL_OK)
+  if (HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_3, 0x1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -116,19 +118,19 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_5, 0x0) != HAL_OK)
+  if (HAL_HRTIM_ADCPostScalerConfig(&hhrtim1, HRTIM_ADCTRIGGER_5, 0x1) != HAL_OK)
   {
     Error_Handler();
   }
   pTimeBaseCfg.Period = 27200;
-  pTimeBaseCfg.RepetitionCounter = 0x00;
+  pTimeBaseCfg.RepetitionCounter = 0x01;
   pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_MUL32;
   pTimeBaseCfg.Mode = HRTIM_MODE_CONTINUOUS;
   if (HAL_HRTIM_TimeBaseConfig(&hhrtim1, HRTIM_TIMERINDEX_MASTER, &pTimeBaseCfg) != HAL_OK)
   {
     Error_Handler();
   }
-  pTimerCfg.InterruptRequests = HRTIM_MASTER_IT_NONE;
+  pTimerCfg.InterruptRequests = HRTIM_MASTER_IT_MREP;
   pTimerCfg.DMARequests = HRTIM_MASTER_DMA_NONE;
   pTimerCfg.DMASrcAddress = 0x0000;
   pTimerCfg.DMADstAddress = 0x0000;
@@ -164,6 +166,7 @@ void MX_HRTIM1_Init(void)
   {
     Error_Handler();
   }
+  pTimeBaseCfg.RepetitionCounter = 0x00;
   if (HAL_HRTIM_TimeBaseConfig(&hhrtim1, HRTIM_TIMERINDEX_TIMER_E, &pTimeBaseCfg) != HAL_OK)
   {
     Error_Handler();
