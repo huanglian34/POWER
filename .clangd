@@ -24,6 +24,11 @@ CompileFlags:
     - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/protocol/Inc
     - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/register/Inc
     - -IC:/Users/LIAN/Desktop/POWER/User/Communicator/uf4com/transport/uf4com_uart/Inc
+    - -IUser/Communicator/cherryusb/core
+    - -IUser/Communicator/cherryusb/common
+    - -IUser/Communicator/cherryusb/class/cdc
+    - -IUser/Communicator/cherryusb/port/fsdev
+    - -IUser/Communicator/uf4com/transport/uf4com_usb_cdc/Inc
 
 Index:
   Background: Build

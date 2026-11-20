@@ -12,6 +12,7 @@
 #include "../Storager/Param/param_uf4com.h"
 #include "../Communicator/uf4com/protocol/Inc/uf4com.h"
 #include "../Communicator/uf4com/transport/uf4com_uart/Inc/uf4com_usrt.h"
+#include "../Communicator/uf4com/transport/uf4com_usb_cdc/Inc/uf4com_usb_cdc.h"
 #include "../Communicator/uf4com/protocol/Inc/uf4com_cmd.h"
 #include "../Communicator/uf4com/register/Inc/uf4com_id_table.h"
 #include "hrtim.h"
@@ -36,9 +37,11 @@ typedef struct
 control_settings_t s_settings;
 power_mode_t s_mode;
 static volatile uint8_t s_save_pending;
+#if !CONTROL_COMM_USE_USB_CDC
 static uint8_t s_rx_byte;
 static uint8_t s_rx_ring[256];
 static volatile uint8_t s_rx_head, s_rx_tail;
+#endif
 static uint16_t s_input_voltage_value, s_input_voltage_raw_value;
 uint16_t s_input_current_value;
 static uint16_t s_input_current_raw_value;
@@ -56,7 +59,9 @@ uint16_t s_output_current_value;
 static uint16_t s_current_feedback_value;
 static uint16_t s_current_reference_value, s_voltage_current_reference_value;
 uint16_t s_duty_command_value;
+#if !CONTROL_COMM_USE_USB_CDC
 static uint8_t s_tx_buffer[UF4_MAX_FRAME_LEN];
+#endif
 static volatile uint16_t s_adc_samples[4];
 static volatile uint16_t s_adc2_sample, s_adc3_sample;
 volatile uint16_t s_adc4_sample;
@@ -225,6 +230,13 @@ static const ParamDescriptor_t s_param_table[] = {
     APP_RO_U16(UF4_ID_TEMP2_TEMPERATURE,"temp2_temperature_centi_c",PARAM_GROUP_SYSTEM,0,65535,&s_temp2_value)
 };
 
+#if CONTROL_COMM_USE_USB_CDC
+static void tx_usb_cdc(const uint8_t *data, uint16_t len, void *user)
+{
+    (void)user;
+    (void)UF4_USB_CDC_Write(data, len);
+}
+#else
 static void tx_uart(const uint8_t *data, uint16_t len, void *user)
 {
     UART_HandleTypeDef *uart=(UART_HandleTypeDef *)user;
@@ -235,6 +247,7 @@ static void tx_uart(const uint8_t *data, uint16_t len, void *user)
         (void)HAL_UART_Transmit_IT(uart, s_tx_buffer, len);
     }
 }
+#endif
 static void save_request(void *user) { (void)user; s_save_pending=1u; }
 static void write_applied(void *user)
 {
@@ -401,7 +414,11 @@ void ControlApp_Init(void)
 #endif
     if (HAL_IWDG_Refresh(&hiwdg) != HAL_OK) Error_Handler();
     if (ParamUF4COM_Bind()!=PARAM_OK) Error_Handler();
+#if CONTROL_COMM_USE_USB_CDC
+    UF4_InitEx(NULL,tx_usb_cdc,NULL);
+#else
     UF4_InitEx(NULL,tx_uart,&huart1);
+#endif
     UF4_SetSaveRequestCallback(save_request,NULL);
     UF4_SetWriteApplyCallback(write_applied,NULL);
     s_control_ready=0u;
@@ -462,15 +479,20 @@ void ControlApp_Init(void)
     mode_config.self_check=self_check;
     PowerMode_Init(&s_mode,&mode_config,HAL_GetTick());
     write_applied(NULL);
+#if CONTROL_COMM_USE_USB_CDC
+    UF4_USB_CDC_Init();
+#else
     s_rx_byte=0u;
     s_rx_head=0u;
     s_rx_tail=0u;
     (void)HAL_UART_Receive_IT(&huart1,&s_rx_byte,1u);
+#endif
     s_last_frame_tick=HAL_GetTick();
     s_control_ready=1u;
     if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK) Error_Handler();
 }
 
+#if !CONTROL_COMM_USE_USB_CDC
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart1)
@@ -484,6 +506,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
         (void)HAL_UART_Receive_IT(&huart1,&s_rx_byte,1u);
     }
 }
+#endif
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
@@ -500,11 +523,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
     }
 }
 
+#if !CONTROL_COMM_USE_USB_CDC
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
     if (huart == &huart1)
         (void)HAL_UART_Receive_IT(&huart1,&s_rx_byte,1u);
 }
+#endif
 
 void HAL_HRTIM_RepetitionEventCallback(HRTIM_HandleTypeDef *hrtim, uint32_t timer_index)
 {
@@ -672,11 +697,22 @@ void ControlApp_Process(void)
 {
     static uint8_t was_enabled;
     uint32_t now=HAL_GetTick();
+#if CONTROL_COMM_USE_USB_CDC
+    {
+        uint8_t rx_byte;
+        while (UF4_USB_CDC_PopByte(&rx_byte))
+        {
+            if (UF4_InputByte(rx_byte) != 0u)
+                s_last_frame_tick = now;
+        }
+    }
+#else
     while (s_rx_tail != s_rx_head)
     {
         if (UF4_InputByte(s_rx_ring[s_rx_tail++]) != 0u)
             s_last_frame_tick = now;
     }
+#endif
     UF4_ProcessMs(now);
     if (s_adc5_processed_count != s_adc5_sample_count)
     {

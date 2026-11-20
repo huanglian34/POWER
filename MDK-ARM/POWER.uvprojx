@@ -17,7 +17,7 @@
         <TargetCommonOption>
           <Device>STM32G474RBTx</Device>
           <Vendor>STMicroelectronics</Vendor>
-          <PackID>Keil.STM32G4xx_DFP.2.2.0</PackID>
+          <PackID>Keil.STM32G4xx_DFP.1.6.0</PackID>
           <PackURL>https://www.keil.com/pack/</PackURL>
           <Cpu>IRAM(0x20000000-0x2001FFFF) IROM(0x8000000-0x801FFFF) CLOCK(8000000) FPU2 CPUTYPE("Cortex-M4") TZ</Cpu>
           <FlashUtilSpec></FlashUtilSpec>
@@ -341,7 +341,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32G474xx</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../User/Controller;../User/Controller/Loop;../User/Storager/Driver;../User/Storager/Param;../User/Storager/Storage;../User/Communicator/uf4com/protocol/Inc;../User/Communicator/uf4com/register/Inc;../User/Communicator/uf4com/transport/uf4com_uart/Inc</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc;../Drivers/STM32G4xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32G4xx/Include;../Drivers/CMSIS/Include;../User/Controller;../User/Controller/Loop;../User/Storager/Driver;../User/Storager/Param;../User/Storager/Storage;../User/Communicator/uf4com/protocol/Inc;../User/Communicator/uf4com/register/Inc;../User/Communicator/uf4com/transport/uf4com_uart/Inc;../User/Communicator/cherryusb/core;../User/Communicator/cherryusb/common;../User/Communicator/cherryusb/class/cdc;../User/Communicator/cherryusb/port/fsdev;../User/Communicator/uf4com/transport/uf4com_usb_cdc/Inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -2268,6 +2268,31 @@
               <FileName>uf4com_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>../User/Communicator/uf4com/transport/uf4com_uart/Src/uf4com_uart.c</FilePath>
+            </File>
+            <File>
+              <FileName>uf4com_usb_cdc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Communicator/uf4com/transport/uf4com_usb_cdc/Src/uf4com_usb_cdc.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>User/CherryUSB</GroupName>
+          <Files>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Communicator/cherryusb/core/usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_acm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Communicator/cherryusb/class/cdc/usbd_cdc_acm.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dc_fsdev.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../User/Communicator/cherryusb/port/fsdev/usb_dc_fsdev.c</FilePath>
             </File>
           </Files>
         </Group>

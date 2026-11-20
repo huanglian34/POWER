@@ -36,6 +36,9 @@
 #define CONTROL_TEST_STANDALONE    1
 #define CONTROL_TEST_VSET_10MV     1200u
 
+/* Host communication transport: 1 = CherryUSB CDC ACM, 0 = USART1. */
+#define CONTROL_COMM_USE_USB_CDC   1
+
 /* Outer-loop defaults: approximately 0.5 Hz crossover on 470 uF. */
 /* Kp is mA/mV in Q16; Ki*Ts is (mA/mV)/sample in Q30. */
 #define CONTROL_VOLTAGE_KP_Q16       96900L

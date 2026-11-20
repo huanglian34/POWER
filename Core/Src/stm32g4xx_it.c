@@ -22,6 +22,7 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "uf4com_usb_cdc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +60,7 @@ extern HRTIM_HandleTypeDef hhrtim1;
 extern TIM_HandleTypeDef htim16;
 extern UART_HandleTypeDef huart1;
 extern UART_HandleTypeDef huart2;
+extern PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN EV */
 extern ADC_HandleTypeDef hadc1;
 extern DMA_HandleTypeDef hdma_adc1;
@@ -204,6 +206,20 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32g4xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles USB low priority interrupt remap.
+  */
+void USB_LP_IRQHandler(void)
+{
+  /* USER CODE BEGIN USB_LP_IRQn 0 */
+  UF4_USB_CDC_IrqHandler();
+  return;
+  /* USER CODE END USB_LP_IRQn 0 */
+  /* USER CODE BEGIN USB_LP_IRQn 1 */
+
+  /* USER CODE END USB_LP_IRQn 1 */
+}
 
 /**
   * @brief This function handles TIM1 update interrupt and TIM16 global interrupt.
