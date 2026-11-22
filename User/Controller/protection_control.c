@@ -1,5 +1,6 @@
 #include "protection_control.h"
 #include "comp.h"
+#include "control_config.h"
 #include "dac.h"
 
 #define PROTECTION_DAC_MAX_CODE 4095u
@@ -26,33 +27,33 @@ static uint16_t clamp_dac_code(uint64_t code)
     return (uint16_t)code;
 }
 
-static uint32_t current_delta_code(uint16_t current_10mA, uint16_t shunt_10uohm,
-                                   uint16_t gain_centi, uint16_t vref_10mV)
+static uint32_t current_delta_code(uint16_t current_mA, uint16_t shunt_10uohm,
+                                   uint16_t gain_centi, uint16_t vref_mV)
 {
-    const uint64_t current_mA = (uint64_t)current_10mA * 10u;
+    const uint64_t current = (uint64_t)current_mA;
     const uint64_t shunt_uohm = (uint64_t)shunt_10uohm * 10u;
-    const uint64_t vref_mV = (uint64_t)vref_10mV * 10u;
+    const uint64_t vref = (uint64_t)vref_mV;
 
-    if (vref_mV == 0u || shunt_uohm == 0u || gain_centi == 0u)
+    if (vref == 0u || shunt_uohm == 0u || gain_centi == 0u)
         return PROTECTION_DAC_MAX_CODE + 1u;
 
     /* mA * uOhm * gain/100 is nanovolts; scale directly to 12-bit DAC codes. */
-    return (uint32_t)((current_mA * shunt_uohm * gain_centi * PROTECTION_DAC_MAX_CODE +
-                       vref_mV * 50000000u) / (vref_mV * 100000000u));
+    return (uint32_t)((current * shunt_uohm * gain_centi * PROTECTION_DAC_MAX_CODE +
+                       vref * 50000000u) / (vref * 100000000u));
 }
 
-static uint16_t voltage_to_dac_code(uint16_t voltage_10mV, uint16_t r_upper_100ohm,
-                                    uint16_t r_lower_100ohm, uint16_t vref_10mV)
+static uint16_t voltage_to_dac_code(uint16_t voltage_mV, uint16_t r_upper_100ohm,
+                                    uint16_t r_lower_100ohm, uint16_t vref_mV)
 {
-    const uint64_t voltage_mV = (uint64_t)voltage_10mV * 10u;
-    const uint64_t vref_mV = (uint64_t)vref_10mV * 10u;
+    const uint64_t voltage = (uint64_t)voltage_mV;
+    const uint64_t vref = (uint64_t)vref_mV;
 
-    if (vref_mV == 0u || r_upper_100ohm == 0u || r_lower_100ohm == 0u)
+    if (vref == 0u || r_upper_100ohm == 0u || r_lower_100ohm == 0u)
         return PROTECTION_DAC_MAX_CODE;
 
-    return clamp_dac_code((voltage_mV * r_lower_100ohm * PROTECTION_DAC_MAX_CODE +
-                           ((uint64_t)r_upper_100ohm * vref_mV / 2u)) /
-                          ((uint64_t)r_upper_100ohm * vref_mV));
+    return clamp_dac_code((voltage * r_lower_100ohm * PROTECTION_DAC_MAX_CODE +
+                           ((uint64_t)r_upper_100ohm * vref / 2u)) /
+                          ((uint64_t)r_upper_100ohm * vref));
 }
 
 bool ProtectionControl_Apply(const protection_settings_t *settings)
@@ -65,8 +66,8 @@ bool ProtectionControl_Apply(const protection_settings_t *settings)
     uint16_t vout_ovp;
     uint32_t iin_delta, iout_delta;
 
-    if (settings == NULL || settings->ocp_10mA == 0u || settings->adc_vref_10mV == 0u ||
-        settings->vin_ovp_10mV == 0u || settings->vout_ovp_10mV == 0u ||
+    if (settings == NULL || settings->ocp_mA == 0u || settings->adc_vref_mV == 0u ||
+        settings->vin_ovp_mV == 0u || settings->vout_ovp_mV == 0u ||
         settings->vin_r_upper_100ohm == 0u || settings->vin_r_lower_100ohm == 0u ||
         settings->vout_r_upper_100ohm == 0u || settings->vout_r_lower_100ohm == 0u ||
         settings->shunt_in_10uohm == 0u || settings->shunt_out_10uohm == 0u ||
@@ -75,16 +76,16 @@ bool ProtectionControl_Apply(const protection_settings_t *settings)
         settings->current_zero_adc >= PROTECTION_DAC_MAX_CODE)
         return false;
 
-    iin_delta = current_delta_code(settings->ocp_10mA, settings->shunt_in_10uohm,
-                                   settings->gain_in_centi, settings->adc_vref_10mV);
-    iout_delta = current_delta_code(settings->ocp_10mA, settings->shunt_out_10uohm,
-                                    settings->gain_out_centi, settings->adc_vref_10mV);
+    iin_delta = current_delta_code(settings->ocp_mA, settings->shunt_in_10uohm,
+                                   settings->gain_in_centi, settings->adc_vref_mV);
+    iout_delta = current_delta_code(settings->ocp_mA, settings->shunt_out_10uohm,
+                                    settings->gain_out_centi, settings->adc_vref_mV);
     s_current_headroom =
                          (uint32_t)settings->current_zero_adc *
-                             settings->adc_vref_10mV * 10u >=
+                             settings->adc_vref_mV >=
                              PROTECTION_ZERO_MIN_MV * PROTECTION_DAC_MAX_CODE &&
                          (uint32_t)settings->current_zero_adc *
-                             settings->adc_vref_10mV * 10u <=
+                             settings->adc_vref_mV <=
                              PROTECTION_ZERO_MAX_MV * PROTECTION_DAC_MAX_CODE &&
                          iin_delta < settings->current_zero_adc &&
                          iout_delta < settings->current_zero_adc &&
@@ -96,10 +97,10 @@ bool ProtectionControl_Apply(const protection_settings_t *settings)
     iout_high = clamp_dac_code((uint64_t)settings->current_zero_adc + iout_delta);
     iout_low = clamp_dac_code(iout_delta < settings->current_zero_adc ?
                                settings->current_zero_adc - iout_delta : 0u);
-    vin_ovp = voltage_to_dac_code(settings->vin_ovp_10mV, settings->vin_r_upper_100ohm,
-                                  settings->vin_r_lower_100ohm, settings->adc_vref_10mV);
-    vout_ovp = voltage_to_dac_code(settings->vout_ovp_10mV, settings->vout_r_upper_100ohm,
-                                   settings->vout_r_lower_100ohm, settings->adc_vref_10mV);
+    vin_ovp = voltage_to_dac_code(settings->vin_ovp_mV, settings->vin_r_upper_100ohm,
+                                  settings->vin_r_lower_100ohm, settings->adc_vref_mV);
+    vout_ovp = voltage_to_dac_code(settings->vout_ovp_mV, settings->vout_r_upper_100ohm,
+                                   settings->vout_r_lower_100ohm, settings->adc_vref_mV);
 
     return HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, iin_high) == HAL_OK &&
            HAL_DAC_SetValue(&hdac3, DAC_CHANNEL_1, DAC_ALIGN_12B_R, iin_low) == HAL_OK &&
@@ -140,23 +141,24 @@ bool ProtectionControl_HasCurrentHeadroom(void)
     return s_current_headroom;
 }
 
-uint16_t ProtectionControl_GetStatus(void)
+CONTROL_RAMFUNC uint16_t ProtectionControl_GetStatus(void)
 {
     uint16_t status = 0u;
 
-    /* CSR VALUE is the raw comparison, before configured output polarity. */
-    if (HAL_COMP_GetOutputLevel(&hcomp1) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP1;
-    if (HAL_COMP_GetOutputLevel(&hcomp2) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP2;
-    if (HAL_COMP_GetOutputLevel(&hcomp3) == COMP_OUTPUT_LEVEL_LOW) status |= PROTECTION_STATUS_COMP3;
-    if (HAL_COMP_GetOutputLevel(&hcomp4) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP4;
-    if (HAL_COMP_GetOutputLevel(&hcomp6) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP6;
-    if (HAL_COMP_GetOutputLevel(&hcomp7) == COMP_OUTPUT_LEVEL_LOW) status |= PROTECTION_STATUS_COMP7;
+    /* CSR VALUE is the raw comparison, before configured output polarity.
+     * Read CSR directly so the 10 kHz ISR stays 100% inside CCM SRAM. */
+    if (READ_BIT(hcomp1.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP1;
+    if (READ_BIT(hcomp2.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP2;
+    if (READ_BIT(hcomp3.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_LOW) status |= PROTECTION_STATUS_COMP3;
+    if (READ_BIT(hcomp4.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP4;
+    if (READ_BIT(hcomp6.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_HIGH) status |= PROTECTION_STATUS_COMP6;
+    if (READ_BIT(hcomp7.Instance->CSR, COMP_CSR_VALUE) == COMP_OUTPUT_LEVEL_LOW) status |= PROTECTION_STATUS_COMP7;
     if (s_ready) status |= PROTECTION_STATUS_READY;
     if (!s_current_headroom) status |= PROTECTION_STATUS_HEADROOM_FAULT;
     return status;
 }
 
-bool ProtectionControl_IsTripActive(void)
+CONTROL_RAMFUNC bool ProtectionControl_IsTripActive(void)
 {
     return (ProtectionControl_GetStatus() & 0x003fu) != 0u;
 }

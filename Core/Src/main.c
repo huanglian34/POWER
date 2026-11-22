@@ -27,7 +27,6 @@
 #include "iwdg.h"
 #include "spi.h"
 #include "tim.h"
-#include "usart.h"
 #include "usb.h"
 #include "gpio.h"
 
@@ -117,11 +116,9 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_TIM16_Init();
-  MX_USART1_UART_Init();
   MX_ADC4_Init();
   MX_FMAC_Init();
   MX_IWDG_Init();
-  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   ControlApp_Init();

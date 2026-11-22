@@ -1,0 +1,129 @@
+name: Build F4CP (Windows)
+
+on:
+  push:
+    branches: [F4CP_release]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          architecture: x86
+#  使用x86架构的Python是因为在x86架构下更为常见和兼容，主要是打包后体积可以进一步减小
+      - name: Install uv
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+
+      - name: Run tests
+        run: |
+          uv run python -m unittest discover -s tests
+#  建议本地跑通之后再提交到GitHub Actions上，避免频繁提交导致CI资源浪费
+      - name: Resolve release metadata
+        id: meta
+        shell: pwsh
+        run: |
+          $version = python -c "import tomllib, pathlib; data = tomllib.loads(pathlib.Path('pyproject.toml').read_text(encoding='utf-8')); print(data['project']['version'])"
+          if (-not $version) {
+            throw 'Failed to resolve project.version from pyproject.toml'
+          }
+
+          $tag = "v$version"
+          $asset = "F4CP-$version-windows-x86.zip"
+          $event = Get-Content -Raw -Path $env:GITHUB_EVENT_PATH | ConvertFrom-Json
+          $commitLines = @()
+
+          if ($event.commits) {
+            foreach ($commit in $event.commits) {
+              if ($commit.id -and $commit.message) {
+                $shortSha = $commit.id.Substring(0, [Math]::Min(7, $commit.id.Length))
+                $commitLines += "- $shortSha $($commit.message)"
+              }
+            }
+          }
+
+          if (-not $commitLines -or $commitLines.Count -eq 0) {
+            $commitSubject = git log -1 --pretty=%s
+            $commitBody = git log -1 --pretty=%b
+            $commitLines += "- $commitSubject"
+            if ($commitBody) {
+              $commitLines += ""
+              $commitLines += $commitBody
+            }
+          }
+
+          $commitText = $commitLines -join "`r`n"
+          $releaseBody = @"
+          Automated Windows build for version $version.
+
+          Commits:
+          $commitText
+          "@
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "asset_name=$asset" >> $env:GITHUB_OUTPUT
+
+          $releaseBody | Out-File -FilePath release_notes.md -Encoding utf8
+
+      - name: Build packaged exe
+        run: |
+          powershell -ExecutionPolicy Bypass -File .\script\package_exe.ps1
+
+      - name: Download UPX
+        run: |
+          curl -L -o upx.zip https://github.com/upx/upx/releases/download/v5.1.1/upx-5.1.1-win64.zip
+          tar -xf upx.zip
+          echo "${{ github.workspace }}\\upx-5.1.1-win64" >> $env:GITHUB_PATH
+
+      - name: Compress binaries with UPX
+        run: |
+          python script/upx_zip.py
+
+      - name: Package build output for release
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          if (Test-Path "release\${{ steps.meta.outputs.asset_name }}") {
+            Remove-Item -LiteralPath "release\${{ steps.meta.outputs.asset_name }}" -Force
+          }
+          Compress-Archive -Path build\exe\* -DestinationPath "release\${{ steps.meta.outputs.asset_name }}"
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: F4CP-${{ steps.meta.outputs.version }}-Windows-x86
+          path: release/${{ steps.meta.outputs.asset_name }}
+
+      - name: Publish GitHub release
+        if: github.event_name != 'pull_request'
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.meta.outputs.tag }}
+          commit: ${{ github.sha }}
+          name: F4CP ${{ steps.meta.outputs.version }}
+          bodyFile: release_notes.md
+          artifacts: release/${{ steps.meta.outputs.asset_name }}
+          artifactContentType: application/zip
+          allowUpdates: true
+          replacesArtifacts: true
+          generateReleaseNotes: false

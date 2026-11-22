@@ -59,3 +59,14 @@ Drivers/CMSIS/*.xml
 Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4*.h
 !Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g4xx.h
 !Drivers/CMSIS/Device/ST/STM32G4xx/Include/stm32g474xx.h
+
+# ==============================================================================
+# 5. Python / F4CP 上位机运行缓存与日志
+# ==============================================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+Doc/UF4DigitalPower-F4CP_release/**/Logs/
+Doc/UF4DigitalPower-F4CP_release/**/Resources/Cache/
+Doc/UF4DigitalPower-F4CP_release/**/Resources/config/power_presets.json

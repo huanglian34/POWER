@@ -23,6 +23,9 @@ static uf4_parser_t s_parser;
 static uf4_config_t s_config;
 static uf4_request_entry_t s_requests[UF4_MAX_PENDING_REQUESTS];
 static uint32_t s_now_ms;
+static uint32_t s_last_stream_ms;
+
+#define UF4_STREAM_PERIOD_MS 20u
 
 static void UF4_LoadDefaultConfig(uf4_config_t *config)
 {
@@ -182,6 +185,7 @@ void UF4_InitEx(const uf4_config_t *config, uf4_tx_fn_t tx, void *user)
     s_tx = tx;
     s_tx_user = user;
     s_now_ms = 0u;
+    s_last_stream_ms = 0u;
 
     UF4_ClearRequests();
     UF4_ParserInit(&s_parser);
@@ -258,7 +262,11 @@ void UF4_ProcessMs(uint32_t now_ms)
         s_requests[i].last_tx_ms = now_ms;
     }
 
-    UF4_StreamTask();
+    if((uint32_t)(now_ms - s_last_stream_ms) >= UF4_STREAM_PERIOD_MS)
+    {
+        s_last_stream_ms = now_ms;
+        UF4_StreamTask();
+    }
 }
 
 uint16_t UF4_BuildFrame(uint8_t seq,

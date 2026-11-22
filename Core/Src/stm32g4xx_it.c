@@ -22,6 +22,7 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "control_config.h"
 #include "uf4com_usb_cdc.h"
 /* USER CODE END Includes */
 
@@ -58,8 +59,6 @@
 /* External variables --------------------------------------------------------*/
 extern HRTIM_HandleTypeDef hhrtim1;
 extern TIM_HandleTypeDef htim16;
-extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
 extern PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN EV */
 extern ADC_HandleTypeDef hadc1;
@@ -236,37 +235,9 @@ void TIM1_UP_TIM16_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles USART1 global interrupt / USART1 wake-up interrupt through EXTI line 25.
-  */
-void USART1_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART1_IRQn 0 */
-
-  /* USER CODE END USART1_IRQn 0 */
-  HAL_UART_IRQHandler(&huart1);
-  /* USER CODE BEGIN USART1_IRQn 1 */
-
-  /* USER CODE END USART1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles USART2 global interrupt / USART2 wake-up interrupt through EXTI line 26.
-  */
-void USART2_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART2_IRQn 0 */
-
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
   * @brief This function handles HRTIM master timer global interrupt.
   */
-void HRTIM1_Master_IRQHandler(void)
+CONTROL_RAMFUNC void HRTIM1_Master_IRQHandler(void)
 {
   /* USER CODE BEGIN HRTIM1_Master_IRQn 0 */
   uint32_t misr = HRTIM1->sMasterRegs.MISR;
@@ -285,7 +256,7 @@ void HRTIM1_Master_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void DMA1_Channel1_IRQHandler(void)
+CONTROL_RAMFUNC void DMA1_Channel1_IRQHandler(void)
 {
   uint32_t isr = DMA1->ISR;
   if ((isr & DMA_ISR_TCIF1) != 0u && (isr & DMA_ISR_TEIF1) == 0u)
@@ -302,8 +273,14 @@ void DMA1_Channel4_IRQHandler(void)
   HAL_DMA_IRQHandler(&hdma_adc5);
 }
 
-void TIM6_DAC_IRQHandler(void)
+CONTROL_RAMFUNC void TIM6_DAC_IRQHandler(void)
 {
+  if ((TIM6->SR & TIM_SR_UIF) != 0u && (TIM6->DIER & TIM_DIER_UIE) != 0u)
+  {
+    TIM6->SR = ~TIM_SR_UIF;
+    HAL_TIM_PeriodElapsedCallback(&htim6);
+    return;
+  }
   HAL_TIM_IRQHandler(&htim6);
 }
 /* USER CODE END 1 */

@@ -34,6 +34,7 @@ typedef struct {
     uint32_t vout_mV;
     uint16_t vref_adc;
     uint16_t adc_vdda_mV;
+    uint32_t current_scale_q16;
     int16_t b0_q15;
     uint16_t forward_iout_adc;
     uint16_t reverse_iout_adc;

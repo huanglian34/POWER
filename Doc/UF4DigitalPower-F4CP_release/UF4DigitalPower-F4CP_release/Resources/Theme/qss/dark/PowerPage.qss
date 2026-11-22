@@ -1,0 +1,4 @@
+QWidget#PowerPage {
+    background-color: #11151C;
+    border: none;
+}

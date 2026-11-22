@@ -51,44 +51,32 @@ CONTROL_RAMFUNC int16_t CurrentLoopSchedule_B0(control_region_t region,
 
     if (b0 != 0) return b0;
 
-    /* A mode-transition sample can land on an invalid grid cell. Find the
-       closest valid coefficient once, without weakening valid grid cells. */
+    /* Fast O(18) neighbor lookup along Vout (never brute-force 3744 cells in 10kHz ISR!). */
+    for (uint8_t step = 1u; step < 18u; ++step) {
+        if (ov >= step) {
+            int16_t cand = s_b0_q15[r][iv][ov - step][ii];
+            if (cand != 0) return cand;
+        }
+        if ((uint8_t)(ov + step) < 18u) {
+            int16_t cand = s_b0_q15[r][iv][ov + step][ii];
+            if (cand != 0) return cand;
+        }
+    }
+    /* Fallback to the opposite region at nearest Vout if this region has no entry. */
     {
-        uint32_t best_distance = UINT32_MAX;
-        uint8_t best_r = 0u;
-        uint8_t best_v = 0u;
-        uint8_t best_o = 0u;
-        uint8_t best_i = 0u;
-        uint8_t rr, vv, oo, ii_scan;
-
-        for (rr = 0u; rr < 2u; ++rr) {
-            for (vv = 0u; vv < 13u; ++vv) {
-                for (oo = 0u; oo < 18u; ++oo) {
-                    for (ii_scan = 0u; ii_scan < 8u; ++ii_scan) {
-                        uint32_t distance;
-                        if (s_b0_q15[rr][vv][oo][ii_scan] == 0) continue;
-                        distance = (uint32_t)(s_vin_mV[vv] > vin_mV ?
-                            s_vin_mV[vv] - vin_mV : vin_mV - s_vin_mV[vv]);
-                        distance += (uint32_t)(s_vout_mV[oo] > vout_mV ?
-                            s_vout_mV[oo] - vout_mV : vout_mV - s_vout_mV[oo]);
-                        distance += (uint32_t)(s_iout_mA[ii_scan] > iout_mA ?
-                            s_iout_mA[ii_scan] - iout_mA : iout_mA - s_iout_mA[ii_scan]) * 2u;
-                        if ((rr != r) && (distance < UINT32_MAX - 100000u)) {
-                            distance += 100000u;
-                        }
-                        if (distance < best_distance) {
-                            best_distance = distance;
-                            best_r = rr;
-                            best_v = vv;
-                            best_o = oo;
-                            best_i = ii_scan;
-                        }
-                    }
-                }
+        uint8_t alt_r = r ^ 1u;
+        if (s_b0_q15[alt_r][iv][ov][ii] != 0) return s_b0_q15[alt_r][iv][ov][ii];
+        for (uint8_t step = 1u; step < 18u; ++step) {
+            if (ov >= step) {
+                int16_t cand = s_b0_q15[alt_r][iv][ov - step][ii];
+                if (cand != 0) return cand;
+            }
+            if ((uint8_t)(ov + step) < 18u) {
+                int16_t cand = s_b0_q15[alt_r][iv][ov + step][ii];
+                if (cand != 0) return cand;
             }
         }
-        b0 = s_b0_q15[best_r][best_v][best_o][best_i];
     }
 
-    return (b0 != 0) ? b0 : 128;
+    return 512;
 }

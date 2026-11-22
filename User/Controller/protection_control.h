@@ -7,11 +7,11 @@
 /* All public configuration values use the same units as the UF4 parameter table. */
 typedef struct
 {
-    uint16_t ocp_10mA;
-    uint16_t adc_vref_10mV;
+    uint16_t ocp_mA;
+    uint16_t adc_vref_mV;
     uint16_t current_zero_adc;
-    uint16_t vin_ovp_10mV;
-    uint16_t vout_ovp_10mV;
+    uint16_t vin_ovp_mV;
+    uint16_t vout_ovp_mV;
     uint16_t vin_r_upper_100ohm;
     uint16_t vin_r_lower_100ohm;
     uint16_t vout_r_upper_100ohm;

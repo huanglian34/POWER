@@ -57,8 +57,6 @@ void PendSV_Handler(void);
 void SysTick_Handler(void);
 void USB_LP_IRQHandler(void);
 void TIM1_UP_TIM16_IRQHandler(void);
-void USART1_IRQHandler(void);
-void USART2_IRQHandler(void);
 void HRTIM1_Master_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 void DMA1_Channel1_IRQHandler(void);

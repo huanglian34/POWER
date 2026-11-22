@@ -4,7 +4,7 @@
 #include "storage_layout.h"
 
 #define STORAGE_AB_MAGIC          0x55463450u
-#define STORAGE_AB_FORMAT_VERSION 1u
+#define STORAGE_AB_FORMAT_VERSION 2u
 #define STORAGE_AB_VALID_MARKER   0xA55A3CC396690FF0ull
 
 typedef struct

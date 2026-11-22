@@ -9,6 +9,8 @@ void UF4_USB_CDC_Deinit(void);
 bool UF4_USB_CDC_IsConfigured(void);
 bool UF4_USB_CDC_PopByte(uint8_t *byte);
 bool UF4_USB_CDC_Write(const uint8_t *data, uint16_t len);
+bool UF4_USB_VofaIsReady(void);
+bool UF4_USB_VofaWrite(const uint8_t *data, uint16_t len);
 void UF4_USB_CDC_IrqHandler(void);
 
 #endif /* UF4COM_USB_CDC_H */

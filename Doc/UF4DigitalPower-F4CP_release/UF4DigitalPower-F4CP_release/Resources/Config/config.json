@@ -1,0 +1,58 @@
+{
+    "Application": {
+        "Author": "UF4OVER",
+        "EnSupportUrl": "https://github.com/UF4OVER/UF4DigitalPower",
+        "ExampleUrl": "https://github.com/UF4OVER/UF4DigitalPower",
+        "FeedbackUrl": "https://github.com/UF4OVER/UF4DigitalPower/issues",
+        "HelpUrl": "https://update.hepi.ng/docs/help",
+        "ReleaseUrl": "https://github.com/UF4OVER/UF4DigitalPower/releases/latest",
+        "RepoUrl": "https://github.com/UF4OVER/UF4DigitalPower",
+        "Version": "1.1.0.RC1",
+        "Year": 2026,
+        "ZhSupportUrl": "https://github.com/UF4OVER/UF4DigitalPower"
+    },
+    "Update": {
+        "CheckUpdateAtStartUp": false,
+        "UpdateUrl": "https://github.com/UF4OVER/UF4DigitalPower/releases"
+    },
+    "FirmwareRemote": {
+        "BaseUrl": "",
+        "GithubOwner": "UF4OVER",
+        "GithubRepo": "UF4DigitalPower"
+    },
+    "QFluentWidgets": {
+        "FontFamilies": [
+            "Segoe UI",
+            "Microsoft YaHei",
+            "PingFang SC"
+        ],
+        "ThemeColor": "#ff2563eb",
+        "ThemeMode": "Light"
+    },
+    "Appearance": {
+        "FontFamily": "",
+        "FontFile": "__system__"
+    },
+    "GithubAuth": {
+        "AvatarUrl": "",
+        "Login": "",
+        "Name": "",
+        "ProfileUrl": "",
+        "SessionExpiresAt": 0,
+        "SessionToken": ""
+    },
+    "MainWindow": {
+        "HighDpiScaling": true,
+        "MicaEnabled": true
+    },
+    "NewVersion": {
+        "NewLocalVersion": "",
+        "NewLowerVersion": "",
+        "NewUpperVersion": ""
+    },
+    "OldVersion": {
+        "OldLocalVersion": "1.1.0.RC1",
+        "OldLowerVersion": "v1.1.0",
+        "OldUpperVersion": "v0.0.3"
+    }
+}

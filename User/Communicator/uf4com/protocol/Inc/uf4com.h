@@ -123,6 +123,20 @@
 #define UF4_ID_DAC4_CH1_OUTPUT_CODE             0x54u
 #define UF4_ID_SELF_CHECK_STATUS                0x55u
 #define UF4_ID_LATCHED_FAULT_REASON             0x56u
+/* Multi-point piecewise-linear output voltage calibration table (up to 6 points). */
+#define UF4_ID_CAL_VOUT_COUNT                   0x60u
+#define UF4_ID_CAL_VOUT_RAW_0                   0x61u
+#define UF4_ID_CAL_VOUT_MV_0                    0x62u
+#define UF4_ID_CAL_VOUT_RAW_1                   0x63u
+#define UF4_ID_CAL_VOUT_MV_1                    0x64u
+#define UF4_ID_CAL_VOUT_RAW_2                   0x65u
+#define UF4_ID_CAL_VOUT_MV_2                    0x66u
+#define UF4_ID_CAL_VOUT_RAW_3                   0x67u
+#define UF4_ID_CAL_VOUT_MV_3                    0x68u
+#define UF4_ID_CAL_VOUT_RAW_4                   0x69u
+#define UF4_ID_CAL_VOUT_MV_4                    0x6Au
+#define UF4_ID_CAL_VOUT_RAW_5                   0x6Bu
+#define UF4_ID_CAL_VOUT_MV_5                    0x6Cu
 
 /**
  * @brief ERROR ACK 帧携带的协议错误码。

@@ -152,10 +152,9 @@ CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV
 {
     int32_t error_mV;
     int64_t prop_q16, step_q16, vcmd_q16;
-    int64_t vcmd_min_q16, vcmd_max_q16;
+    int64_t vcmd_max_q16;
     int32_t vcmd_mV;
-    uint32_t duty_q15;
-    uint8_t is_boost;
+    uint32_t vcmd_max_mV, gain_q14;
 
     if (!enable || vin_mV < CONTROL_VIN_MIN_MV || vin_mV > CONTROL_VIN_MAX_MV ||
         vref_mV == 0u || vref_mV > CONTROL_VOUT_MAX_MV || vout_mV > CONTROL_VOUT_MAX_MV)
@@ -164,9 +163,10 @@ CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV
         return 0u;
     }
 
-    is_boost = (vout_mV > vin_mV) ? 1u : 0u;
-    vcmd_min_q16 = is_boost ? ((int64_t)vin_mV << 16) : 0LL;
-    vcmd_max_q16 = is_boost ? ((int64_t)CONTROL_VOUT_MAX_MV << 16) : ((int64_t)vin_mV << 16);
+    /* Unified monotonic voltage command across Buck, Buck-Boost, and Boost. */
+    vcmd_max_mV = (uint32_t)(((uint64_t)vin_mV * CONTROL_GAIN_MAX_Q14) >> 14);
+    if (vcmd_max_mV > CONTROL_VOUT_MAX_MV) vcmd_max_mV = CONTROL_VOUT_MAX_MV;
+    vcmd_max_q16 = (int64_t)vcmd_max_mV << 16;
 
     error_mV = (int32_t)vref_mV - (int32_t)vout_mV;
     prop_q16 = (int64_t)655L * error_mV;
@@ -175,7 +175,7 @@ CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV
 
     if ((!current_limited || error_mV < 0) &&
         !((vcmd_q16 > vcmd_max_q16 && error_mV > 0) ||
-          (vcmd_q16 < vcmd_min_q16 && error_mV < 0)))
+          (vcmd_q16 < 0LL && error_mV < 0)))
     {
         s_cv_integral_q16_mV = clamp_i64(
             s_cv_integral_q16_mV + step_q16,
@@ -184,16 +184,12 @@ CONTROL_RAMFUNC uint16_t VoltageLoop_DutyLimit(uint32_t vin_mV, uint32_t vout_mV
     }
 
     vcmd_q16 = clamp_i64(((int64_t)vref_mV << 16) + prop_q16 + s_cv_integral_q16_mV,
-                         vcmd_min_q16, vcmd_max_q16);
+                         0LL, vcmd_max_q16);
     vcmd_mV = (int32_t)(vcmd_q16 >> 16);
 
-    if (!is_boost)
-        duty_q15 = ((uint32_t)vcmd_mV * 32767u) / vin_mV;
-    else
-        duty_q15 = (vcmd_mV <= (int32_t)vin_mV) ? 0u :
-            (((uint32_t)(vcmd_mV - (int32_t)vin_mV) * 32767u) / (uint32_t)vcmd_mV);
-
-    return (duty_q15 > CONTROL_DUTY_MAX_Q15) ? CONTROL_DUTY_MAX_Q15 : (uint16_t)duty_q15;
+    /* Return unified Q14 voltage gain M = Vcmd / Vin (16384 = 1.00x). */
+    gain_q14 = ((uint32_t)vcmd_mV * CONTROL_GAIN_ONE_Q14) / vin_mV;
+    return (gain_q14 > CONTROL_GAIN_MAX_Q14) ? (uint16_t)CONTROL_GAIN_MAX_Q14 : (uint16_t)gain_q14;
 }
 
 const voltage_loop_result_t *VoltageLoop_GetLastResult(void)
